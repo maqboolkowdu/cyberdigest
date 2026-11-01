@@ -41,7 +41,13 @@
   const gccBadge = (item) => (item.gcc ? `<span class="badge gcc">${item.countries.length ? flags(item) : '🌍'} GCC</span>` : '');
   const topicChip = (item) => { const t = primaryTopic(item); return `<span class="chip-topic">${t.emoji} ${esc(t.label)}</span>`; };
   const aiBadge = (item) => (item.ai && item.ai.ideas ? '<span class="badge ai" title="Key ideas written by Claude from the publisher\'s summary">✨ AI summary</span>' : '');
-  const ideasOf = (item) => (item.ideas && item.ideas.length ? item.ideas : [item.summary && item.summary.length > 40 ? item.summary.slice(0, 420) : 'Headline brief. This source only publishes the headline, so open the full story for the details.']);
+  const ideasOf = (item) => {
+    if (item.ideas && item.ideas.length) return item.ideas;
+    if (item.summary && item.summary.length > 40) return [item.summary.slice(0, 420)];
+    // Headline only: say who published it rather than repeating the same sentence on every card.
+    const where = item.countries && item.countries.length ? ` about ${item.countries.map((c) => COUNTRIES[c].name).join(' and ')}` : '';
+    return [`${item.source || 'The publisher'} shared only this headline${where}, with no summary. Tap "Full story" to read the article.`];
+  };
 
   function score(item) {
     const p = Store.state.prefs;
@@ -50,7 +56,7 @@
     if (item.gcc) s += 3;
     s += item.countries.filter((c) => p.countries.includes(c)).length * 2;
     s += item.topics.filter((t) => p.topics.includes(t)).length * 1.5;
-    if (item.ideas && item.ideas.length) s += 1;
+    s += item.ideas && item.ideas.length ? 1 : -4; // headline-only stories go below ones with real key points
     return s;
   }
 
