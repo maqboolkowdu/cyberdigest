@@ -1,0 +1,164 @@
+/* CyberDigest — "Immersive 3D" design, layered over app.css when <html data-skin="immersive">.
+   3D comes from CSS transforms only (no libraries, images or WebGL), so the page stays light.
+   All motion stops when the device asks for reduced motion. */
+:root[data-skin="immersive"] {
+  --paper: #e8e8e5; --surface: #f3f3f1; --ink: #121212; --muted: #5d5d5d; --grid: rgba(0, 0, 0, .07);
+  --accent: #ff6a13; --accent-ink: #111; --line: 1px solid #b9b9b4; --line-strong: 1px solid var(--ink);
+  --mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="immersive"]:not([data-theme="light"]) { --paper: #0d0d0d; --surface: #161616; --ink: #ededea; --muted: #9a9a9a; --grid: rgba(255, 255, 255, .06); --line: 1px solid #333; }
+}
+:root[data-skin="immersive"][data-theme="dark"] { --paper: #0d0d0d; --surface: #161616; --ink: #ededea; --muted: #9a9a9a; --grid: rgba(255, 255, 255, .06); --line: 1px solid #333; }
+
+/* Blueprint grid background */
+[data-skin="immersive"] body {
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Mono labels everywhere small text is a "UI label" */
+[data-skin="immersive"] .btn, [data-skin="immersive"] .chip, [data-skin="immersive"] .eyebrow, [data-skin="immersive"] .kpi small,
+[data-skin="immersive"] .badge, [data-skin="immersive"] .chip-topic, [data-skin="immersive"] .card-meta, [data-skin="immersive"] .card-mins,
+[data-skin="immersive"] .row-meta, [data-skin="immersive"] .mini-meta, [data-skin="immersive"] .day-head, [data-skin="immersive"] .topnav a,
+[data-skin="immersive"] .bottom-nav a, [data-skin="immersive"] .mast-stats, [data-skin="immersive"] .site-foot, [data-skin="immersive"] .section-head a,
+[data-skin="immersive"] .filter-label, [data-skin="immersive"] .count-line, [data-skin="immersive"] .panel h3, [data-skin="immersive"] .idea-n {
+  font-family: var(--mono); letter-spacing: 0;
+}
+
+/* Masthead: thin lines, orange square in the logo */
+[data-skin="immersive"] .masthead { background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: blur(6px); border-bottom: var(--line); }
+[data-skin="immersive"] .brand { border-right: var(--line); gap: 10px; }
+[data-skin="immersive"] .brand::before { content: ''; width: 26px; height: 26px; border-radius: 7px; background: var(--accent); box-shadow: inset 0 0 0 5px color-mix(in srgb, var(--accent) 70%, #000); }
+[data-skin="immersive"] .brand-mark { font-family: var(--mono); font-size: 15px; }
+[data-skin="immersive"] .topnav a, [data-skin="immersive"] .mast-right { border-left: var(--line); font-weight: 600; text-transform: none; }
+[data-skin="immersive"] .topnav a.active { background: var(--ink); color: var(--paper); }
+[data-skin="immersive"] .topnav a:hover { background: var(--accent); color: #111; }
+[data-skin="immersive"] .icon-btn { border: var(--line-strong); border-radius: 8px; }
+
+/* Buttons and chips: softer, with an orange primary */
+[data-skin="immersive"] .btn, [data-skin="immersive"] .chip { border: var(--line-strong); border-radius: 8px; font-weight: 600; }
+[data-skin="immersive"] .btn-primary { background: var(--accent); color: #111; border-color: var(--accent); }
+[data-skin="immersive"] .btn-primary:hover:not(:disabled) { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn-cta { font: 700 14px/1 var(--mono, monospace); background: var(--accent); color: #111; border: 0; border-radius: 10px; padding: 14px 18px; cursor: pointer; justify-self: start; }
+.btn-cta:hover { background: var(--ink); color: var(--paper); }
+
+/* Panels get thin lines and orange corner brackets */
+[data-skin="immersive"] .split, [data-skin="immersive"] .panel, [data-skin="immersive"] .filterbar, [data-skin="immersive"] .list,
+[data-skin="immersive"] .tiles, [data-skin="immersive"] .saved, [data-skin="immersive"] .modal-card, [data-skin="immersive"] .sheet-card, [data-skin="immersive"] .done-card {
+  border: var(--line); border-radius: 0;
+}
+[data-skin="immersive"] .panel, [data-skin="immersive"] .filterbar, [data-skin="immersive"] .hero-cell, [data-skin="immersive"] .done-card {
+  background:
+    linear-gradient(var(--accent), var(--accent)) top left / 10px 2px no-repeat, linear-gradient(var(--accent), var(--accent)) top left / 2px 10px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top right / 10px 2px no-repeat, linear-gradient(var(--accent), var(--accent)) top right / 2px 10px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 10px 2px no-repeat, linear-gradient(var(--accent), var(--accent)) bottom left / 2px 10px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 10px 2px no-repeat, linear-gradient(var(--accent), var(--accent)) bottom right / 2px 10px no-repeat,
+    var(--surface);
+}
+[data-skin="immersive"] .search input, [data-skin="immersive"] .filterbar select, [data-skin="immersive"] .note, [data-skin="immersive"] .field input,
+[data-skin="immersive"] .field textarea, [data-skin="immersive"] .saved select { border: var(--line-strong); border-radius: 8px; }
+[data-skin="immersive"] .page-head h1 { font-family: var(--mono); font-weight: 800; letter-spacing: -.05em; text-transform: uppercase; }
+
+/* ---------- Hero: giant headline, 3D cube, wireframe globe ---------- */
+[data-skin="immersive"] .hero3d { display: grid; gap: 14px; margin-bottom: 22px; }
+.mega { font-family: var(--mono, monospace); font-weight: 800; font-size: min(11.4vw, 150px); line-height: .9; letter-spacing: -.06em; white-space: nowrap; overflow: hidden; }
+.hero-tags { display: flex; flex-wrap: wrap; gap: 6px 22px; font: 600 13px/1.4 var(--mono, monospace); text-transform: uppercase; }
+.hero-tags span::first-letter { color: var(--accent); }
+.hero-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-top: var(--line); border-left: var(--line); }
+.hero-cell { border-right: var(--line); border-bottom: var(--line); padding: 18px; min-height: 190px; }
+.hero-text { grid-column: 1 / -1; display: grid; gap: 14px; align-content: center; min-height: 0; }
+.hero-text p { margin: 0; font: 500 15px/1.6 var(--mono, monospace); max-width: 44ch; }
+.hero-obj { display: grid; place-items: center; perspective: 700px; }
+.hero-dark { background: #111 !important; color: #f3f3f1; display: grid; place-items: center; position: relative; overflow: hidden; }
+.hero-dark-label { position: absolute; left: 12px; bottom: 10px; font: 600 12px var(--mono, monospace); text-transform: uppercase; }
+.hero-dark-label b { color: var(--accent); font-size: 16px; margin-left: 6px; }
+
+/* The cube: six faces placed in 3D space */
+.cube-scene { --s: 96px; width: var(--s); height: var(--s); position: relative; }
+.cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transform: rotateX(-24deg) rotateY(36deg); animation: cubeSpin 18s linear infinite; }
+.face { position: absolute; inset: 0; display: grid; place-items: center; font: 800 calc(var(--s) * .2) var(--mono, monospace); color: #222; border-radius: 14px;
+  background: #f1f1ee; border: 1px solid #cfcfca; box-shadow: inset 0 0 0 6px #e2e2de; }
+.f-front { background: #1b1b1b; border-color: #000; box-shadow: inset 0 0 0 7px var(--accent); transform: translateZ(calc(var(--s) / 2)); }
+.f-back { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
+.f-right { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); background: #dcdcd8; }
+.f-left { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); background: #e6e6e2; }
+.f-top { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); background: #fbfbf9; color: var(--accent); }
+.f-bottom { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); background: #c9c9c4; }
+.cube-shadow { position: absolute; left: 12%; right: 12%; bottom: calc(var(--s) * -.32); height: 14px; border-radius: 50%; background: rgba(0, 0, 0, .18); filter: blur(6px); animation: shadowPulse 18s linear infinite; }
+@keyframes cubeSpin { from { transform: rotateX(-24deg) rotateY(36deg); } to { transform: rotateX(-24deg) rotateY(396deg); } }
+@keyframes shadowPulse { 0%, 100% { opacity: .9; } 50% { opacity: .6; } }
+
+/* Wireframe globe: four rings rotated around the vertical axis */
+.globe { --g: 104px; width: var(--g); height: var(--g); position: relative; transform-style: preserve-3d; transform: rotateX(-18deg); animation: globeSpin 14s linear infinite; }
+.globe i { position: absolute; inset: 0; border: 1.5px solid #f3f3f1; border-radius: 50%; }
+.globe i:nth-child(2) { transform: rotateY(45deg); } .globe i:nth-child(3) { transform: rotateY(90deg); } .globe i:nth-child(4) { transform: rotateY(135deg); border-color: var(--accent); }
+.globe::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px solid #f3f3f1; transform: rotateX(90deg); border-radius: 50%; height: 0; }
+@keyframes globeSpin { from { transform: rotateX(-18deg) rotateY(0); } to { transform: rotateX(-18deg) rotateY(360deg); } }
+
+/* ---------- Today: briefing + 3D card stack ---------- */
+[data-skin="immersive"] .split { background: color-mix(in srgb, var(--surface) 85%, transparent); }
+[data-skin="immersive"] .brief { background: transparent; color: var(--ink); border-color: var(--line) !important; border-bottom: var(--line); }
+[data-skin="immersive"] .brief h2 { font-family: var(--mono); letter-spacing: -.04em; }
+[data-skin="immersive"] .kpis { border: var(--line-strong); background: var(--surface); }
+[data-skin="immersive"] .kpi { border-right: var(--line-strong); }
+[data-skin="immersive"] .kpi b { font-family: var(--mono); }
+[data-skin="immersive"] .kpi small { color: var(--muted); }
+[data-skin="immersive"] .meter { border: var(--line-strong); border-radius: 99px; overflow: hidden; height: 10px; background: var(--surface); }
+[data-skin="immersive"] .meter i { background: var(--accent); }
+[data-skin="immersive"] .brief-hint kbd { border: var(--line-strong); border-radius: 5px; background: var(--surface); }
+[data-skin="immersive"] .stack-progress i { border: var(--line-strong); border-radius: 99px; height: 6px; }
+[data-skin="immersive"] .stack-progress i.read { background: var(--ink); } [data-skin="immersive"] .stack-progress i.cur { background: var(--accent); border-color: var(--accent); }
+
+[data-skin="immersive"] .card-stage { perspective: 1100px; padding: 0 0 44px; }
+[data-skin="immersive"] .card-3d { position: relative; transform-style: preserve-3d; transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .15s ease-out; }
+/* Two "next cards" waiting behind the current one */
+[data-skin="immersive"] .card-3d::before, [data-skin="immersive"] .card-3d::after { content: ''; position: absolute; inset: 0; border: var(--line-strong); border-radius: 16px; background: var(--surface); }
+[data-skin="immersive"] .card-3d::before { transform: translate3d(0, 46px, -40px) scale(.92); opacity: .55; }
+[data-skin="immersive"] .card-3d::after { transform: translate3d(0, 22px, -20px) scale(.96); opacity: .85; }
+[data-skin="immersive"] .idea-card { position: relative; z-index: 1; transform: translateZ(0); border: var(--line-strong); border-radius: 16px;
+  background:
+    linear-gradient(rgba(0, 0, 0, .05) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(0, 0, 0, .05) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--tint);
+  box-shadow: 0 30px 50px -28px rgba(0, 0, 0, .45); }
+[data-skin="immersive"] .idea-card .badge, [data-skin="immersive"] .idea-card .chip-topic { border-width: 1px; border-radius: 6px; }
+[data-skin="immersive"] .card-title { font-family: var(--font); letter-spacing: -.02em; }
+[data-skin="immersive"] .takeaway { border: 1px solid #111; border-radius: 10px; background: rgba(255, 255, 255, .7); }
+[data-skin="immersive"] .dots i { border: 1px solid #111; border-radius: 50%; } [data-skin="immersive"] .dots i.on { border-radius: 99px; width: 22px; }
+
+/* Tiles, list, reader */
+[data-skin="immersive"] .mini { border-right: var(--line); transition: transform .2s ease, box-shadow .2s ease; }
+[data-skin="immersive"] .mini-top { border-bottom: var(--line); font-family: var(--mono); }
+[data-skin="immersive"] .row-item { border-bottom: var(--line); }
+[data-skin="immersive"] .row-swatch { border: 1px solid #111; border-radius: 8px; }
+[data-skin="immersive"] .day-head { background: transparent; color: var(--ink); border: var(--line); border-bottom: 0; }
+[data-skin="immersive"] .day-head::before { content: '■ '; color: var(--accent); }
+[data-skin="immersive"] .sheet-card, [data-skin="immersive"] .modal-card { border-radius: 16px; }
+[data-skin="immersive"] .reader-head { border-bottom: var(--line-strong); }
+[data-skin="immersive"] .idea { border: var(--line); border-radius: 12px; }
+[data-skin="immersive"] .bottom-nav { border-top: var(--line); background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(8px); }
+[data-skin="immersive"] .bottom-nav a { border-right: var(--line); text-transform: none; font-weight: 600; }
+[data-skin="immersive"] .bottom-nav a.active { background: var(--ink); color: var(--paper); }
+[data-skin="immersive"] .bottom-nav a.active .ico { color: var(--accent); }
+[data-skin="immersive"] .site-foot { border-top: var(--line); }
+
+@media (min-width: 960px) {
+  .hero-row { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, .9fr); }
+  .hero-text { grid-column: auto; min-height: 260px; }
+  .hero-cell { min-height: 260px; }
+  .cube-scene { --s: 150px; }
+  .globe { --g: 130px; }
+  [data-skin="immersive"] .mini:hover { transform: perspective(600px) translateZ(24px) rotateX(4deg); box-shadow: 0 18px 30px -18px rgba(0, 0, 0, .5); position: relative; z-index: 2; }
+}
+
+/* Motion: entering cards flip in; everything stops for reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  [data-skin="immersive"] .idea-card { animation: cardIn .45s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes cardIn { from { opacity: 0; transform: rotateY(-18deg) translate3d(40px, 0, -80px); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cube, .globe, .cube-shadow { animation: none; }
+  [data-skin="immersive"] .card-3d { transform: none; }
+}

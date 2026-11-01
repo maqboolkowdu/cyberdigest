@@ -1,0 +1,52 @@
+name: Deploy CyberDigest
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Refresh the news every 3 hours (UTC). Scheduled runs only fire on the default branch.
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install feed builder dependencies
+        run: pip install -r tools/requirements.txt || echo "::warning::Could not install anthropic; AI summaries will be skipped"
+      - name: Refresh news feed
+        # AI summaries run only when the ANTHROPIC_API_KEY repository secret is set.
+        # A failed fetch keeps the committed feed.json, so the site still deploys.
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CYBERDIGEST_AI_MODEL: ${{ vars.CYBERDIGEST_AI_MODEL || 'claude-opus-5-5' }}
+        run: python3 tools/fetch_feeds.py || echo "::warning::Feed refresh failed; deploying the previous feed"
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Collect site files
+        # Publish only the app, not the tools, docs or workflow files.
+        run: |
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest sw.js .nojekyll assets data _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

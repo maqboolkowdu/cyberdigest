@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CyberDigest — Daily Cyber Bytes</title>
+  <meta name="description" content="Bite-size daily cyber security news from around the world with a GCC focus: UAE, Saudi Arabia, Qatar, Oman, Bahrain and Kuwait." />
+  <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b0b0b" media="(prefers-color-scheme: dark)" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+  <!-- Sustainable by design: system fonts only, no web fonts, trackers, ads or third-party scripts. -->
+  <link rel="stylesheet" href="assets/css/app.css" />
+  <link rel="stylesheet" href="assets/css/immersive.css" />
+  <script>
+    try {
+      const s = JSON.parse(localStorage.getItem('cyberdigest:v1') || '{}'), p = s.prefs || {};
+      const skin = new URLSearchParams(location.search).get('skin') || (p.skinChosen ? p.skin : 'immersive');
+      if (p.theme && p.theme !== 'system') document.documentElement.dataset.theme = p.theme;
+      if (skin !== 'flat') document.documentElement.dataset.skin = 'immersive';
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+  <header class="masthead">
+    <a class="brand" href="#/today" aria-label="CyberDigest home">
+      <span class="brand-mark">CYBER<br />DIGEST</span>
+    </a>
+    <nav class="topnav" id="nav" aria-label="Main navigation"></nav>
+    <div class="mast-right">
+      <span class="mast-stats" id="mastStats"></span>
+      <button class="icon-btn" id="btnTheme" title="Toggle light / dark" aria-label="Toggle light or dark theme"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="page-head" id="pageHead">
+      <h1 id="pageTitle">Today</h1>
+      <p id="pageSub"></p>
+    </div>
+    <section id="view" class="view" tabindex="-1"></section>
+  </main>
+
+  <footer class="site-foot" id="siteFoot"></footer>
+
+  <nav class="bottom-nav" id="bottomNav" aria-label="Mobile navigation"></nav>
+
+  <!-- Story reader -->
+  <dialog id="reader" class="sheet">
+    <div class="sheet-card" id="readerBody"></div>
+  </dialog>
+
+  <!-- Save to stash -->
+  <dialog id="saveDlg" class="modal">
+    <form method="dialog" class="modal-card" id="saveForm">
+      <h2>Save to a stash</h2>
+      <div id="stashPick" class="stash-pick"></div>
+      <label class="field"><span>New stash</span><input id="newStash" placeholder="e.g. Ransomware cases for my blog" maxlength="60" /></label>
+      <label class="field"><span>Your note <small class="muted">(optional)</small></span><textarea id="saveNote" rows="3" placeholder="Why does this matter for our campus / organisation?"></textarea></label>
+      <div class="row end">
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="ok" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- First-run interests -->
+  <dialog id="onboard" class="modal">
+    <form method="dialog" class="modal-card wide" id="onboardForm"></form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  </script>
+</body>
+</html>
