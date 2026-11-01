@@ -94,7 +94,7 @@ Use your own SMTP service. **Brevo** is the easiest without a domain:
 5. **Authentication → Rate Limits**: raise **Rate limit for sending emails** to about `30` per hour. This setting is only editable with custom SMTP.
 6. Tell the site who sends the codes: in `assets/js/config.js`, set `emailSender` to, for example, `'CyberDigest <you@example.com>'`.
 
-> If you use a free address such as Gmail as the sender, some codes may land in spam, because the email isn't sent by Gmail's own servers. When you have your own domain, verify it in Brevo and send from `no-reply@yourdomain.com` for the best delivery.
+> If you use a free address such as Gmail as the sender, Brevo sends from its own domain instead (for example `you@12345678.brevosend.com`), keeping your display name. Put that exact address in `emailSender` so visitors know what to look for. Some codes may still land in spam at first. When you have your own domain, verify it in Brevo and send from `no-reply@yourdomain.com` for the best delivery.
 
 ### Step 4: Send a code, not a link
 
