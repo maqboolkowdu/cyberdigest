@@ -138,29 +138,52 @@ def first_image(el, raw_html):
 
 
 def sentences(text):
-    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z\"“])", text)
-    return [p.strip() for p in parts if len(p.strip()) > 25]
+    """Complete sentences only: a fragment cut off by the feed ('…To write these files to') is dropped."""
+    parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+(?=[A-Z\"“0-9])", text) if p.strip()]
+    if parts and not re.search(r"[.!?][\"”')\]]?$", parts[-1]) and len(parts) > 1:
+        parts = parts[:-1]
+    # Picture credits and captions are not news ("Image: Shutterstock.com, Sashkin.").
+    parts = [re.sub(r"\s*\b(?:Image|Photo|Picture|Credit|Source|Illustration)s?(?: credit)?:\s*[^.]*\.?\s*$", "", p, flags=re.I).strip()
+             for p in parts if not re.match(r"^(?:Image|Photo|Picture|Credit|Illustration)s?(?: credit)?:", p, re.I)]
+    return [p for p in parts if len(p) > 25]
+
+
+# A sentence that starts like this leans on the one before it ("To avoid this, I added…"),
+# so it is never used to open a key point on its own.
+LEANS_BACK = re.compile(
+    r"^(this|these|that|those|it|its|it's|they|them|their|such|he|she|his|her|we|our|"
+    r"however|but|and|or|so|also|then|thus|therefore|meanwhile|instead|still|yet|"
+    r"to (?:avoid|fix|address|do|solve) (?:this|that|it)|in (?:this|that|addition)|as a result|for (?:this|that) reason)\b",
+    re.I)
+POINT_WORDS = 45   # aim for about this many words per key point
+POINT_MAX = 75     # a point that has to keep a leaning sentence may stretch to this
 
 
 def make_ideas(title, summary):
-    """Split a summary into up to 3 bite-size idea cards (~45 words each)."""
+    """Split a summary into up to 3 key points that each make sense on their own."""
     if not summary or summary.lower().startswith(title.lower()[:40]) and len(summary) < len(title) + 20:
         return []
-    ideas, cur = [], ""
-    for s in sentences(summary):
-        if len((cur + " " + s).split()) > 45 and cur:
-            ideas.append(cur.strip())
-            cur = s
-        else:
-            cur = (cur + " " + s).strip()
-        if len(ideas) == 3:
+    points = []
+    for sent in sentences(summary):
+        words = len(sent.split())
+        if points and (LEANS_BACK.match(sent) or words < 8):
+            # Keep it with the sentence it depends on, if there is room; otherwise stop here
+            # rather than start a point that makes no sense on its own.
+            if len((points[-1] + " " + sent).split()) <= POINT_MAX:
+                points[-1] = points[-1] + " " + sent
+                continue
             break
-    if cur and len(ideas) < 3:
-        ideas.append(cur.strip())
+        if points and len((points[-1] + " " + sent).split()) <= POINT_WORDS:
+            points[-1] = points[-1] + " " + sent
+        elif len(points) < 3:
+            points.append(sent)
+        else:
+            break
     out = []
-    for i in ideas:
-        words = i.split()
-        out.append(" ".join(words[:70]) + ("…" if len(words) > 70 else ""))
+    for p in points:
+        p = re.sub(r"\s+([,.;:!?)])", r"\1", p)  # "PHP , the" -> "PHP, the"
+        w = p.split()
+        out.append(" ".join(w[:POINT_MAX]) + ("…" if len(w) > POINT_MAX else ""))
     return out
 
 
@@ -371,6 +394,9 @@ def main():
     merged.sort(key=lambda i: i["published"], reverse=True)
     merged = merged[:MAX_ITEMS]
 
+    for it in merged:  # rebuild key points with the current rules (AI-written ones are kept)
+        if not (it.get("ai") or {}).get("ideas") and it.get("summary"):
+            it["ideas"] = make_ideas(it["title"], it["summary"]) or ([it["summary"][:420]] if it.get("resolved") == "ok" else [])
     fill_headline_only(merged)
     before = {i["id"] for i in merged}
     merged = ai_summaries.enrich(merged)
