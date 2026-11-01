@@ -31,11 +31,13 @@ jobs:
       - name: Install feed builder dependencies
         run: pip install -r tools/requirements.txt || echo "::warning::Could not install anthropic; AI summaries will be skipped"
       - name: Refresh news feed
-        # AI summaries run only when the ANTHROPIC_API_KEY repository secret is set.
+        # AI summaries run only when an ANTHROPIC_API_KEY or OPENAI_API_KEY repository secret is set.
         # A failed fetch keeps the committed feed.json, so the site still deploys.
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CYBERDIGEST_AI_MODEL: ${{ vars.CYBERDIGEST_AI_MODEL || 'claude-opus-5-5' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CYBERDIGEST_AI_PROVIDER: ${{ vars.CYBERDIGEST_AI_PROVIDER }}
+          CYBERDIGEST_AI_MODEL: ${{ vars.CYBERDIGEST_AI_MODEL }}
         run: python3 tools/fetch_feeds.py || echo "::warning::Feed refresh failed; deploying the previous feed"
       - uses: actions/configure-pages@v5
         with:
