@@ -641,6 +641,7 @@
   window.addEventListener('hashchange', () => { explore.limit = 40; render(); });
 
   async function load() {
+    const fromLink = Auth.completeFromUrl(); // runs first: removes any sign-in link details from the address
     $('#view').innerHTML = '<div class="empty">Loading today\'s news…</div>';
     try {
       const res = await fetch('data/feed.json', { cache: 'no-cache' });
@@ -651,6 +652,9 @@
     BY_ID = new Map(FEED.items.map((i) => [i.id, i]));
     render();
     renderFooter();
+    const link = await fromLink;
+    if (link && link.user) { Track.event('signed_in', { via: 'link' }); toast(`Signed in as ${link.user.email}`); }
+    if (link && link.error) toast(link.error);
     if (!Store.state.prefs.onboarded) Welcome.open();
     else askConsentOnce();
   }

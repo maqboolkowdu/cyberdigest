@@ -23,6 +23,7 @@ Reviewed before deployment. This covers the browser code (`assets/js/auth.js`, `
 - **Allow-listed event names**, flat payloads of at most 2 KB, short route and version strings, and at most 120 events per browser per minute.
 - **Private reports.** The `insights` views live in a schema the Data API doesn't expose, and grants are revoked from `anon` and `authenticated`. The `readers` view (emails) is only visible to the project owner in the dashboard.
 - **Sign-in.** One-time codes come from Supabase Auth. There are no passwords to leak or store. Supabase's rate limits and short code expiry stop code guessing (see the setup guide). The first sign-in creates the account, so the form doesn't reveal which emails already have accounts.
+- **Sign-in links.** If an email contains a link instead of a code, the app accepts it only after asking Supabase who the token belongs to (`/auth/v1/user`). It then removes the tokens or error from the address bar and browser history straight away. Forged or expired links are rejected with a friendly message.
 - **Sessions.** "Keep me signed in" uses `localStorage`; otherwise `sessionStorage`, which is cleared when the tab closes. Tokens refresh automatically. A revoked or reused refresh token signs the visitor out. Sign-out also revokes the session on the server.
 - **Privacy by default.**
   - Nothing is sent before the visitor sees the notice.

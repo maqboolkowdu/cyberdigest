@@ -183,7 +183,9 @@
         inner = `<div class="w-done">✅ Signed in as <b>${esc(u.email)}</b>${Auth.remembered ? ' · kept signed in on this device' : ' · until you close this tab'}</div>
           <button class="btn" id="wSignOut" type="button">Sign out</button>`;
       } else if (acct.phase === 'code') {
-        inner = `<p>We sent a code to <b>${esc(acct.email)}</b>. It's valid for a few minutes. Check your spam folder if you don't see it.</p>
+        inner = `<p>We sent a <b>6-digit code</b> to <b>${esc(acct.email)}</b>.${Auth.sender ? ` Look for an email from <b>${esc(Auth.sender)}</b>.` : ''}
+          It's valid for 10 minutes. Not there? Check your spam or Promotions folder.</p>
+          <p class="muted small">If the email shows a sign-in link instead of a code, you can simply click the link.</p>
           <form class="w-form" id="wCodeForm" novalidate>
             <label class="field"><span>One-time code</span>
               <input id="wCode" class="w-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="••••••" required /></label>
@@ -197,6 +199,7 @@
             <label class="field"><span>Email</span>
               <input id="wEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@example.com" value="${esc(acct.email)}" required /></label>
             <button class="btn btn-primary" id="wSend" type="submit">Email me a code</button>
+            ${Auth.sender ? `<p class="muted small">The code comes from <b>${esc(Auth.sender)}</b>.</p>` : ''}
           </form>`;
       }
       return `
