@@ -40,7 +40,7 @@
   const flags = (item) => item.countries.map((c) => `<span title="${esc(COUNTRIES[c].name)}">${COUNTRIES[c].flag}</span>`).join('');
   const gccBadge = (item) => (item.gcc ? `<span class="badge gcc">${item.countries.length ? flags(item) : '🌍'} GCC</span>` : '');
   const topicChip = (item) => { const t = primaryTopic(item); return `<span class="chip-topic">${t.emoji} ${esc(t.label)}</span>`; };
-  const aiBadge = (item) => (item.ai && item.ai.ideas ? '<span class="badge ai" title="Key ideas written by Claude from the publisher\'s summary">✨ AI summary</span>' : '');
+  const aiBadge = (item) => (item.ai && item.ai.ideas ? '<span class="badge ai" title="Key points written by AI from the publisher\'s summary">✨ AI summary</span>' : '');
   const ideasOf = (item) => {
     if (item.ideas && item.ideas.length) return item.ideas;
     if (item.summary && item.summary.length > 40) return [item.summary.slice(0, 420)];

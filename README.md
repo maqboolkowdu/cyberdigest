@@ -152,6 +152,22 @@ Fetching feeds…
 Wrote 248 stories (29 GCC) → data/feed.json
 ```
 
+### Optional: turn on AI summaries with OpenAI
+
+Use this if you have OpenAI API credit. It does the same job as the Claude option below: 2–3 clear key points, a **Why it matters** line, a GCC relevance rating, and dropping off-topic stories. It needs no extra software.
+
+1. Create an API key at **platform.openai.com → API keys** (check that your project has credit under **Billing**).
+2. In GitHub, open **cyberdigest → Settings → Secrets and variables → Actions → New repository secret**. Name it `OPENAI_API_KEY` and paste the key.
+3. Optional: to choose the model, open the **Variables** tab and add `CYBERDIGEST_AI_MODEL`. The default is `gpt-5.4-mini`; `gpt-5.4-nano` is cheaper and simpler.
+4. Run the workflow once (**Actions → Deploy CyberDigest → Run workflow**). The log shows `AI summaries: 60 new stories with openai gpt-5.4-mini…`.
+
+| Model | Price per 1M tokens (input / output) | Rough cost for CyberDigest |
+|---|---|---|
+| `gpt-5.4-mini` (default) | $0.75 / $4.50 | about $0.25 a day |
+| `gpt-5.4-nano` | $0.20 / $1.25 | about $0.07 a day |
+
+Prices are from [OpenAI's pricing page](https://developers.openai.com/api/docs/pricing) (November 2026), and the estimates assume 100–150 new stories a day. If both an OpenAI and an Anthropic key are set, Claude is used unless you add the variable `CYBERDIGEST_AI_PROVIDER` = `openai`.
+
 ### Optional: turn on AI summaries with Claude
 
 Without this, key points are cut from the publisher's summary sentence by sentence and GCC tagging uses keywords. With it, Claude rewrites each new story as 2–3 clear key points, adds a practical **Why it matters** line, and rates its GCC relevance. That corrects keyword mistakes, such as a person's surname "Al Kuwaiti" being tagged as Kuwait.
@@ -174,7 +190,7 @@ How it keeps cost and risk down:
 - **Batches of 8 stories per request**, at low effort, with a cap of 60 new stories per run (`CYBERDIGEST_AI_MAX`).
 - **It can't make up details.** The prompt only allows facts from the publisher's text. Headline-only stories (Google News) keep the headline brief instead of an invented summary.
 - **If something fails, the feed still builds.** A missing key, a network error, a rate limit or a declined request means those stories keep their keyword summaries.
-- Security news can occasionally trip Claude's safety filters. The request lets the API retry a declined batch on its recommended fallback model automatically.
+- Security news can occasionally trip a model's safety filters. With Claude, the request lets the API retry a declined batch on its recommended fallback model automatically. With OpenAI, a declined batch keeps its keyword summaries.
 
 Rough cost with the default model (`claude-opus-5-5`): about **$0.005–0.01 per story**. A typical 100–150 new stories a day comes to roughly **$0.50–1.50 a day**, and the per-run cap limits the worst case. To use a cheaper model, set a repository **variable** or env value `CYBERDIGEST_AI_MODEL`, for example `claude-haiku-5-5`. Set `CYBERDIGEST_AI=0` to switch summaries off.
 
