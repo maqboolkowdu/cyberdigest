@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <!-- Security: only this site's own scripts may run (no inline scripts), and the only other
+       server the page may talk to is the Supabase project used for sign-in and usage stats. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>CyberDigest — Daily Cyber Bytes</title>
   <meta name="description" content="Bite-size daily cyber security news from around the world with a GCC focus: UAE, Saudi Arabia, Qatar, Oman, Bahrain and Kuwait." />
@@ -10,17 +14,11 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
-  <!-- Sustainable by design: system fonts only, no web fonts, trackers, ads or third-party scripts. -->
+  <!-- Sustainable by design: system fonts only, no web fonts, ads or third-party scripts. -->
   <link rel="stylesheet" href="assets/css/app.css" />
   <link rel="stylesheet" href="assets/css/immersive.css" />
-  <script>
-    try {
-      const s = JSON.parse(localStorage.getItem('cyberdigest:v1') || '{}'), p = s.prefs || {};
-      const skin = new URLSearchParams(location.search).get('skin') || (p.skinChosen ? p.skin : 'immersive');
-      if (p.theme && p.theme !== 'system') document.documentElement.dataset.theme = p.theme;
-      if (skin !== 'flat') document.documentElement.dataset.skin = 'immersive';
-    } catch (e) {}
-  </script>
+  <link rel="stylesheet" href="assets/css/welcome.css" />
+  <script src="assets/js/boot.js"></script>
 </head>
 <body>
   <a class="skip" href="#view">Skip to content</a>
@@ -66,18 +64,17 @@
     </form>
   </dialog>
 
-  <!-- First-run interests -->
-  <dialog id="onboard" class="modal">
-    <form method="dialog" class="modal-card wide" id="onboardForm"></form>
-  </dialog>
+  <!-- Welcome tour (first visit, "Replay welcome tour", and Sign in) -->
+  <section id="welcome" class="welcome" hidden aria-label="Welcome to CyberDigest"></section>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/js/data.js"></script>
   <script src="assets/js/store.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/track.js"></script>
   <script src="assets/js/app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-  </script>
+  <script src="assets/js/welcome.js"></script>
 </body>
 </html>

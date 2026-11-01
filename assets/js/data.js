@@ -43,3 +43,7 @@
 
   window.CD = { TOPICS, COUNTRIES, esc, dayKey, ago, readMins };
 })();
+
+/* Only http(s) links may be opened or shared (blocks javascript: and data: links from a
+   compromised feed or a tampered backup file). */
+window.CD.safeUrl = (url) => (/^https?:\/\//i.test(String(url || '').trim()) ? String(url).trim() : '#');
