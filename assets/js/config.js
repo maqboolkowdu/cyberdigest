@@ -8,5 +8,5 @@ window.CD_CONFIG = {
   supabaseAnonKey: 'sb_publishable_RtpfJAJYVXG7_q7cuZn9eg_sOJMElPd', // publishable (public) key
   // Shown to visitors so they know which email to look for. Update it after setting up your own
   // email sender (custom SMTP), e.g. 'CyberDigest <no-reply@yourdomain.com>'.
-  emailSender: 'Supabase Auth <noreply@mail.app.supabase.io>',
+  emailSender: 'CyberDigest <maqbool.kowdu@12643788.brevosend.com>',
 };

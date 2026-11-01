@@ -17,6 +17,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -233,6 +234,94 @@ def fetch(name, url, region):
     return items
 
 
+# ---------------------------------------------------------------- headline-only stories
+# Google News search results carry only a headline and an encoded news.google.com link. For those,
+# find the publisher's real article address and use the summary the publisher wrote for link
+# previews (og:description), so the card has real key points and "Full story" opens the article.
+BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
+MAX_LOOKUPS = 40       # per run
+MAX_PAGE = 600_000     # bytes read from an article page
+
+
+def _get(url, data=None, headers=None, limit=MAX_PAGE):
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": BROWSER_UA, "Accept-Language": "en", **(headers or {})})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        charset = r.headers.get_content_charset() or "utf-8"
+        return r.geturl(), r.read(limit).decode(charset, "replace")
+
+
+def google_article_url(link):
+    """Decode a news.google.com/rss/articles/... link to the publisher's URL (None if it can't)."""
+    _, page = _get(link, limit=2_000_000)
+    found = {k: re.search(rf'data-n-a-{k}="([^"]+)"', page) for k in ("id", "ts", "sg")}
+    if not all(found.values()):
+        return None
+    inner = ["garturlreq", [["X", "X", ["X", "X"], None, None, 1, 1, "US:en", None, 1, None, None, None, None, None, 0, 1],
+             "X", "X", 1, [1, 1, 1], 1, 1, None, 0, 0, None, 0],
+             found["id"].group(1), int(found["ts"].group(1)), found["sg"].group(1)]
+    body = urllib.parse.urlencode({"f.req": json.dumps([[["Fbv4je", json.dumps(inner), None, "generic"]]])}).encode()
+    _, out = _get("https://news.google.com/_/DotsSplashUi/data/batchexecute", body,
+                  {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"})
+    m = re.search(r'garturlres\\",\\"(https?://[^\\"]+)', out)
+    return m.group(1) if m else None
+
+
+def page_description(html_text):
+    """The summary a publisher wrote for link previews, or from its structured data."""
+    for name in ("og:description", "twitter:description", "description"):
+        n = re.escape(name)
+        for pat in (rf'<meta\b[^>]*?(?:property|name)\s*=\s*["\']{n}["\'][^>]*?content\s*=\s*"([^"]*)"',
+                    rf"<meta\b[^>]*?(?:property|name)\s*=\s*[\"']{n}[\"'][^>]*?content\s*=\s*'([^']*)'",
+                    rf'<meta\b[^>]*?content\s*=\s*"([^"]*)"[^>]*?(?:property|name)\s*=\s*["\']{n}["\']',
+                    rf"<meta\b[^>]*?content\s*=\s*'([^']*)'[^>]*?(?:property|name)\s*=\s*[\"']{n}[\"']"):
+            m = re.search(pat, html_text, re.I)
+            if m and len(clean(m.group(1))) >= 60:
+                return clean(m.group(1))
+    m = re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.){60,})"', html_text)  # JSON-LD
+    if m:
+        try:
+            return clean(json.loads('"' + m.group(1) + '"'))
+        except ValueError:
+            pass
+    return ""
+
+
+def fill_headline_only(items):
+    todo = [i for i in items if not i.get("summary") and i.get("resolved") not in ("ok", "failed")][:MAX_LOOKUPS]
+    if not todo:
+        return
+
+    def work(it):
+        try:
+            real = google_article_url(it["link"]) if "news.google.com" in it["link"] else it["link"]
+            if not real or not re.match(r"^https?://", real, re.I):
+                raise ValueError("no article address")
+            final, page = _get(real)
+            desc = page_description(page)
+            if len(desc) < 60 or desc.lower().startswith(it["title"].lower()[:60]) and len(desc) < len(it["title"]) + 20:
+                raise ValueError("no usable summary")
+            desc = desc if len(desc) <= 700 else desc[:700].rsplit(" ", 1)[0] + "…"
+            it["link"] = final if re.match(r"^https?://", final, re.I) and "news.google.com" not in final else real
+            it["summary"] = desc
+            it["ideas"] = make_ideas(it["title"], desc) or [desc]
+            countries, gcc, topics, _ = tag(it["title"] + " " + desc)
+            it["countries"] = sorted(set(it["countries"]) | set(countries))
+            if it["topics"] == ["general"]:
+                it["topics"] = topics
+            it["resolved"] = "ok"
+            return True
+        except Exception as e:  # noqa: BLE001 — a lookup failure must not break the build
+            it["resolve_tries"] = it.get("resolve_tries", 0) + 1
+            if it["resolve_tries"] >= 3:
+                it["resolved"] = "failed"
+            print(f"  ! summary lookup failed: {it['title'][:50]}… ({e})", file=sys.stderr)
+            return False
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        ok = sum(pool.map(work, todo))
+    print(f"Headline-only stories: {ok} of {len(todo)} filled with the publisher's summary.", file=sys.stderr)
+
+
 def norm_title(t):
     return re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()[:80]
 
@@ -256,6 +345,11 @@ def main():
     old_by_id = {i["id"]: i for i in old}
     for it in fresh:
         prev_it = old_by_id.get(it["id"])
+        if prev_it and ("resolved" in prev_it or "resolve_tries" in prev_it):
+            # Keep a looked-up article address + summary (and the retry count) so it's fetched once.
+            for k in ("resolved", "resolve_tries", "link", "summary", "ideas", "topics", "countries"):
+                if k in prev_it:
+                    it[k] = prev_it[k]
         if prev_it and "ai" in prev_it:
             for k in ("ai", "ideas", "takeaway", "gcc", "countries"):
                 if k in prev_it:
@@ -277,6 +371,7 @@ def main():
     merged.sort(key=lambda i: i["published"], reverse=True)
     merged = merged[:MAX_ITEMS]
 
+    fill_headline_only(merged)
     before = {i["id"] for i in merged}
     merged = ai_summaries.enrich(merged)
     # Remember off-topic stories while they are still in the source feeds, so they aren't re-checked every run.
