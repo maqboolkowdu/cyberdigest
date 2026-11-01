@@ -4,6 +4,6 @@
    The anon key is meant to be public: the database rules in supabase/setup.sql only let
    visitors add usage events, never read or change anything. */
 window.CD_CONFIG = {
-  supabaseUrl: '',       // e.g. 'https://abcdefghijklmnop.supabase.co'
-  supabaseAnonKey: '',   // Project Settings → API → anon public key
+  supabaseUrl: 'https://nrwkxvnkalbsezemtrex.supabase.co',
+  supabaseAnonKey: 'sb_publishable_RtpfJAJYVXG7_q7cuZn9eg_sOJMElPd', // publishable (public) key
 };
