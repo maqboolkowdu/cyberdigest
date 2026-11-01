@@ -9,10 +9,11 @@
   const app = () => window.CDApp;
 
   const NAMES = { home: 'Welcome', interests: 'Your interests', goal: 'Daily goal', design: 'Design', theme: 'Theme', account: 'Sign in (optional)' };
+  const SLOW_EMAIL = "The email service is slow right now. Your code may still arrive within a minute. If it doesn't, press Resend.";
   const GOALS = [[5, 'Coffee break', '~3 min'], [8, 'Recommended', '~5 min'], [10, 'Commute', '~6 min'], [15, 'Analyst', '~9 min'], [20, 'Deep dive', '~12 min']];
 
   let root, steps = [], step = 0, mode = 'tour';
-  const acct = { phase: 'email', email: '', busy: false, resendAt: 0, timer: null };
+  const acct = { phase: 'email', email: '', busy: false, resendAt: 0, timer: null, notice: '' };
 
   /* ---------- open / close ---------- */
   function open(opts = {}) {
@@ -185,6 +186,7 @@
       } else if (acct.phase === 'code') {
         inner = `<p>We sent a <b>6-digit code</b> to <b>${esc(acct.email)}</b>.${Auth.sender ? ` Look for an email from <b>${esc(Auth.sender)}</b>.` : ''}
           It's valid for 10 minutes. Not there? Check your spam or Promotions folder.</p>
+          ${acct.notice ? `<p class="w-msg ok">${esc(acct.notice)}</p>` : ''}
           <p class="muted small">If the email shows a sign-in link instead of a code, you can simply click the link.</p>
           <form class="w-form" id="wCodeForm" novalidate>
             <label class="field"><span>One-time code</span>
@@ -251,10 +253,20 @@
           acct.busy = true; busy(btn, true, 'Sending…'); msg('');
           try {
             acct.email = await Auth.requestCode($('#wEmail').value);
-            acct.phase = 'code'; acct.resendAt = Date.now() + 60000;
+            acct.phase = 'code'; acct.resendAt = Date.now() + 60000; acct.notice = '';
             Track.event('otp_requested');
             show();
           } catch (err) {
+            if (err.status === 504) {
+              // Supabase timed out waiting for the email service, but the email is often sent anyway.
+              // Move on to the code screen instead of inviting repeat clicks (each new email cancels the last).
+              acct.email = String($('#wEmail').value).trim().toLowerCase();
+              acct.phase = 'code'; acct.resendAt = Date.now() + 60000;
+              acct.notice = SLOW_EMAIL;
+              Track.event('otp_failed', { stage: 'send', status: 504 });
+              show();
+              return;
+            }
             msg(err.friendly ? err.message : Auth.explain(err));
             Track.event('otp_failed', { stage: 'send', status: err.status || 0 });
             busy(btn, false, 'Email me a code');
@@ -277,7 +289,11 @@
         resend.addEventListener('click', async () => {
           resend.disabled = true; msg('');
           try { await Auth.requestCode(acct.email); acct.resendAt = Date.now() + 60000; msg('A new code is on its way.', true); Track.event('otp_requested', { resend: true }); }
-          catch (err) { msg(Auth.explain(err)); Track.event('otp_failed', { stage: 'resend', status: err.status || 0 }); }
+          catch (err) {
+            if (err.status === 504) { acct.resendAt = Date.now() + 60000; msg(SLOW_EMAIL, true); }
+            else msg(Auth.explain(err));
+            Track.event('otp_failed', { stage: 'resend', status: err.status || 0 });
+          }
           tick();
         });
         $('#wChange').addEventListener('click', () => { acct.phase = 'email'; show(); });
