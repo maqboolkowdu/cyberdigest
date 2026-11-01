@@ -49,9 +49,10 @@
     let data = {};
     try { data = await res.json(); } catch (e) { /* empty body */ }
     if (!res.ok) {
-      const err = new Error(data.msg || data.error_description || data.message || `Request failed (${res.status})`);
+      const err = new Error(data.msg || data.error_description || data.message || data.error || `Request failed (${res.status})`);
       err.status = res.status;
       err.code = data.error_code || data.code || '';
+      console.warn('[CyberDigest sign-in]', res.status, err.code, err.message); // detail for the site owner (F12 → Console)
       throw err;
     }
     return data;
@@ -80,6 +81,13 @@
     }
     if (/otp_expired|expired/i.test(err.code + err.message)) return 'That code has expired or is not correct. Ask for a new one.';
     if (err.status === 400 || err.status === 403 || err.status === 422) return 'That code is not correct. Check the email and try again.';
+    if (err.status >= 500) {
+      // Usually the email service (SMTP) refused to send. Show Supabase's own short reason.
+      const why = String(err.message || '').slice(0, 120);
+      return /send|email|smtp|mail/i.test(why)
+        ? `We couldn't send the email right now (${why}). Please try again later.`
+        : `The sign-in service had a problem${why ? ` (${why})` : ''}. Please try again later.`;
+    }
     if (err instanceof TypeError) return 'Could not reach the sign-in service. Check your connection.';
     return 'Something went wrong. Please try again.';
   }

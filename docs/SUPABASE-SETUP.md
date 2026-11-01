@@ -186,5 +186,6 @@ Use the **Export → CSV** button on any result to open it in Excel.
 | "That code is not correct" with the right code | The code expired, or a newer code was requested | Ask for a new code and use the latest email |
 | "Too many sign-in emails were sent recently" | Project-wide email limit (about 2/hour on the built-in sender) | Set up custom SMTP (Step 3), then raise **Rate Limits → emails per hour** |
 | "Please wait N seconds…" | Per-person cooldown between codes | Wait the time shown; use the newest email |
+| "We couldn't send the email right now (Error sending … email)" | Supabase can't log in to your SMTP server, or the sender isn't allowed | Check **Logs → Auth** in Supabase for the SMTP reply. For Brevo: Username = the SMTP **Login** (`…@smtp-brevo.com`), Password = an **SMTP key** (not the API key `xkeysib-…`, not your account password), Sender email verified in Brevo, SMTP not blocked for new accounts |
 | The tour still has 5 steps | `config.js` not filled in, or an old cached copy | Check the two values; close and reopen the app |
 | No rows in `events` | Visitor said no to usage stats, browser sends Do Not Track, or CSP blocks the URL | Turn stats on in Settings; check the URL in `index.html` `connect-src` |
