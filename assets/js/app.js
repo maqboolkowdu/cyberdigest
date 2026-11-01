@@ -1,6 +1,6 @@
 /* CyberDigest — views, routing and interactions. */
 (function () {
-  const { TOPICS, COUNTRIES, esc, dayKey, ago, readMins } = CD;
+  const { TOPICS, COUNTRIES, esc, dayKey, ago, readMins, safeUrl } = CD;
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
@@ -83,7 +83,7 @@
   function itemMarkdown(item, note) {
     const date = new Date(item.published).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
     const where = item.countries.length ? ` · ${item.countries.map((c) => COUNTRIES[c].name).join(', ')}` : '';
-    let md = `### ${item.title}\n*${item.source} · ${date}${where}* · [Read the full story](${item.link})\n\n`;
+    let md = `### ${item.title}\n*${item.source} · ${date}${where}* · [Read the full story](${safeUrl(item.link)})\n\n`;
     md += ideasOf(item).map((i) => `- ${i}`).join('\n') + '\n';
     if (item.takeaway) md += `\n**Why it matters:** ${item.takeaway}\n`;
     if (note) md += `\n> **My take:** ${note}\n`;
@@ -116,7 +116,7 @@
     let bytes = nav ? nav.transferSize : 0;
     performance.getEntriesByType('resource').forEach((r) => { bytes += r.transferSize || 0; });
     const weight = bytes ? `<b>${Math.max(1, Math.round(bytes / 1024))} KB</b> downloaded this visit` : '<b>Loaded from cache</b> (nothing downloaded)';
-    $('#siteFoot').innerHTML = `<span>🌱 ${weight}</span><span>System fonts only</span><span>No trackers, ads or third-party scripts</span><span>Dark mode saves power on OLED screens</span>
+    $('#siteFoot').innerHTML = `<span>🌱 ${weight}</span><span>System fonts only</span><span>${Track.enabled ? 'No ads or third-party scripts · usage stats only with your OK' : 'No trackers, ads or third-party scripts'}</span><span>Dark mode saves power on OLED screens</span>
       <span class="muted">${FEED.generated ? `News updated ${ago(FEED.generated)}` : ''}</span>`;
   }
 
@@ -228,7 +228,7 @@
         ${item.takeaway && viewer.idea === ideas.length - 1 ? `<p class="takeaway"><b>Why it matters</b> ${esc(item.takeaway)}</p>` : ''}
         <div class="card-foot">
           ${ideas.length > 1 ? `<span class="dots">${ideas.map((_, i) => `<i class="${i === viewer.idea ? 'on' : ''}"></i>`).join('')}</span>` : '<span></span>'}
-          <a href="${esc(item.link)}" target="_blank" rel="noopener" class="read-link">Full story ↗</a>
+          <a href="${esc(safeUrl(item.link))}" target="_blank" rel="noopener noreferrer" class="read-link">Full story ↗</a>
         </div>
       </article></div></div>
       <div class="card-actions">
@@ -264,7 +264,11 @@
     const item = BY_ID.get(ids[viewer.story]);
     if (viewer.idea < ideasOf(item).length - 1) { viewer.idea++; return renderCard(); }
     if (Store.markRead(item.id)) {
-      if (Store.todayCount() === Store.state.prefs.goal) toast(`🎯 Daily goal reached! Streak: ${Store.streak()} days`);
+      Track.event('byte_read', { topic: item.topics[0], gcc: !!item.gcc, ai: !!(item.ai && item.ai.ideas) });
+      if (Store.todayCount() === Store.state.prefs.goal) {
+        toast(`🎯 Daily goal reached! Streak: ${Store.streak()} days`);
+        Track.event('goal_reached', { goal: Store.state.prefs.goal, streak: Store.streak() });
+      }
     }
     viewer.story = ids.findIndex((id, i) => i > viewer.story && !Store.isRead(id));
     viewer.idea = 0;
@@ -357,7 +361,7 @@
 
     const opts = (list, cur) => list.map(([v, l]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`).join('');
     $('#view').innerHTML = `
-      <form class="filterbar" role="search" onsubmit="return false">
+      <form class="filterbar" role="search">
         <label class="search"><span class="skip">Search stories</span><input id="q" type="search" placeholder="Search stories, e.g. Fortinet, NCA…" value="${esc(params.get('q') || '')}" /></label>
         <div class="filter-row">
           <span class="filter-label">Filter</span>
@@ -377,11 +381,12 @@
     let tmr;
     $('#q').addEventListener('input', (e) => {
       clearTimeout(tmr);
-      tmr = setTimeout(() => { history.replaceState(null, '', link('q', e.target.value.trim())); explore.limit = 40; render(true); }, 300);
+      tmr = setTimeout(() => { if (e.target.value.trim()) Track.event('search', { len: e.target.value.trim().length }); history.replaceState(null, '', link('q', e.target.value.trim())); explore.limit = 40; render(true); }, 300);
     });
     $('#unread').addEventListener('change', (e) => { location.hash = link('unread', e.target.checked ? '1' : ''); });
-    $('#fRegion').addEventListener('change', (e) => { location.hash = link('region', e.target.value); });
-    $('#fTopic').addEventListener('change', (e) => { location.hash = link('topic', e.target.value); });
+    $('.filterbar').addEventListener('submit', (e) => e.preventDefault());
+    $('#fRegion').addEventListener('change', (e) => { Track.event('explore_filter', { region: e.target.value, topic }); location.hash = link('region', e.target.value); });
+    $('#fTopic').addEventListener('change', (e) => { Track.event('explore_filter', { region, topic: e.target.value }); location.hash = link('topic', e.target.value); });
     const more = $('#moreRows');
     if (more) more.addEventListener('click', () => { explore.limit += 40; render(); });
   }
@@ -403,18 +408,19 @@
         ${saved && saved.note ? `<div class="idea note"><span class="idea-n">Your note</span><p>${esc(saved.note)}</p></div>` : ''}
       </div>
       <footer class="row wrap">
-        <a class="btn btn-primary" href="${esc(item.link)}" target="_blank" rel="noopener">Read full story ↗</a>
+        <a class="btn btn-primary" href="${esc(safeUrl(item.link))}" target="_blank" rel="noopener noreferrer">Read full story ↗</a>
         <button class="btn ${saved ? 'btn-saved' : ''}" id="rSave">${saved ? '★ Saved' : '☆ Save'}</button>
         <button class="btn" id="rShare">Share</button>
         <button class="btn" id="rMd">Copy as Markdown</button>
       </footer>`;
     const dlg = $('#reader');
     dlg.showModal();
+    Track.event('story_opened', { topic: item.topics[0], gcc: !!item.gcc, from: parseHash().route });
     if (Store.markRead(item.id)) renderChrome(parseHash().route);
     $('[data-close]', dlg).addEventListener('click', () => dlg.close());
     $('#rSave').addEventListener('click', () => openSave(item, () => openReader(id)));
     $('#rShare').addEventListener('click', () => share(item));
-    $('#rMd').addEventListener('click', () => copy(itemMarkdown(item, saved && saved.note), 'Markdown copied — paste it into your post'));
+    $('#rMd').addEventListener('click', () => Track.event('export', { kind: 'copy_one' }) || copy(itemMarkdown(item, saved && saved.note), 'Markdown copied — paste it into your post'));
   }
   $('#reader').addEventListener('click', (e) => { if (e.target.id === 'reader') e.target.close(); });
   $('#reader').addEventListener('close', () => { if (parseHash().route !== 'today') render(); });
@@ -426,8 +432,8 @@
 
   async function share(item) {
     const text = `${item.title}\n\n${ideasOf(item)[0]}`;
-    if (navigator.share) { try { await navigator.share({ title: item.title, text, url: item.link }); } catch (e) { /* cancelled */ } }
-    else copy(`${text}\n${item.link}`, 'Link and summary copied');
+    if (navigator.share) { try { await navigator.share({ title: item.title, text, url: safeUrl(item.link) }); } catch (e) { /* cancelled */ } }
+    else copy(`${text}\n${safeUrl(item.link)}`, 'Link and summary copied');
   }
 
   /* ---------- Save dialog ---------- */
@@ -451,6 +457,7 @@
         if (name) stash = Store.addStash(name);
         Store.saveItem(item, stash, $('#saveNote').value.trim());
         toast(`Saved to ${Store.state.stashes.find((s) => s.id === stash).name}`);
+        Track.event('byte_saved', { topic: item.topics[0], gcc: !!item.gcc, note: !!$('#saveNote').value.trim() });
       }
       renderChrome(parseHash().route);
       if (after) after();
@@ -483,7 +490,7 @@
             <textarea class="note" data-note="${i.id}" rows="2" placeholder="Add your take: why does it matter, what would you do?">${esc(v.note)}</textarea>
             <div class="row wrap">
               <select data-move="${i.id}" aria-label="Move to stash">${st.stashes.map((s) => `<option value="${s.id}" ${s.id === v.stash ? 'selected' : ''}>${s.emoji} ${esc(s.name)}</option>`).join('')}</select>
-              <a class="btn sm" href="${esc(i.link)}" target="_blank" rel="noopener">Source ↗</a>
+              <a class="btn sm" href="${esc(safeUrl(i.link))}" target="_blank" rel="noopener noreferrer">Source ↗</a>
               <button class="btn sm danger" data-unsave="${i.id}">Remove</button>
             </div>
           </div>
@@ -495,8 +502,8 @@
     $$('[data-move]').forEach((s) => s.addEventListener('change', () => { st.saved[s.dataset.move].stash = s.value; Store.save(); render(); }));
     $$('[data-unsave]').forEach((b) => b.addEventListener('click', () => { Store.unsave(b.dataset.unsave); renderChrome('stashes'); render(); }));
     const md = () => `# ${stash.name}\n\n_Curated with CyberDigest on ${new Date().toLocaleDateString(undefined, { dateStyle: 'long' })}_\n\n` + list.map((v) => itemMarkdown(v.item, v.note)).join('\n');
-    $('#mdExport').addEventListener('click', () => download(`${stash.name.replace(/[^\w-]+/g, '-').toLowerCase()}-${dayKey()}.md`, md()));
-    $('#mdCopy').addEventListener('click', () => copy(md(), 'Stash copied as Markdown'));
+    $('#mdExport').addEventListener('click', () => Track.event('export', { kind: 'download_stash', count: list.length }) || download(`${stash.name.replace(/[^\w-]+/g, '-').toLowerCase()}-${dayKey()}.md`, md()));
+    $('#mdCopy').addEventListener('click', () => Track.event('export', { kind: 'copy_stash', count: list.length }) || copy(md(), 'Stash copied as Markdown'));
     const del = $('#delStash');
     if (del) del.addEventListener('click', () => { if (confirm(`Delete "${stash.name}"? Saved stories move to Read later.`)) { Store.removeStash(sel); location.hash = '#/stashes'; } });
   }
@@ -536,6 +543,16 @@
         <h3>Appearance</h3>
         <div class="chips">${['system', 'light', 'dark'].map((t) => `<label class="chip toggle-chip"><input type="radio" name="theme" value="${t}" ${p.theme === t ? 'checked' : ''}/>${t[0].toUpperCase() + t.slice(1)}</label>`).join('')}</div>
       </section>
+      <section class="panel" id="accountPanel">
+        <h3>Account &amp; privacy</h3>
+        ${Auth.enabled ? (Auth.user
+          ? `<p class="small">Signed in as <b>${esc(Auth.user.email)}</b>${Auth.remembered ? ' (kept signed in on this device)' : ' (until this tab closes)'}.</p><div class="row wrap"><button class="btn" id="signOut">Sign out</button></div>`
+          : '<p class="muted small">Optional: sign in with a one-time code sent to your email. No password.</p><div class="row wrap"><button class="btn btn-primary" id="signIn">Sign in</button></div>')
+          : '<p class="muted small">Accounts are not switched on for this site.</p>'}
+        ${Track.enabled ? `<label class="toggle"><input type="checkbox" id="trackToggle" ${Track.consent() === 'on' ? 'checked' : ''}/> Share anonymous usage stats to help improve CyberDigest</label>
+          <p class="muted small">Counts which pages and features you use and how many bytes you read, with a random ID. Never titles, searches or notes.</p>` : ''}
+        <div class="row wrap"><button class="btn" id="replayTour">Replay welcome tour</button></div>
+      </section>
       <section class="panel">
         <h3>Your data</h3>
         <p class="muted small">Everything (reading history, stashes, notes) is stored only in this browser. ${readTotal} stories read, ${Object.keys(Store.state.saved).length} saved.</p>
@@ -551,8 +568,12 @@
         <ul class="sources">${FEED.sources.map((s) => `<li><span>${s.region === 'gcc' ? '🌍' : '🌐'} ${esc(s.name)}</span><em>${bySource[s.name] || 0}</em></li>`).join('')}</ul>
       </section></div>`;
     $('#saveInterests').addEventListener('click', () => { readInterests($('#interests')); toast("Interests saved. Today's stack was rebuilt."); renderChrome('settings'); });
-    $$('input[name=theme]').forEach((r) => r.addEventListener('change', () => { Store.setPref('theme', r.value); applyTheme(); }));
-    $$('input[name=skin]').forEach((r) => r.addEventListener('change', () => { Store.setPref('skin', r.value); Store.setPref('skinChosen', true); applyTheme(); toast(r.value === 'immersive' ? 'Immersive 3D design on' : 'Flat design on'); }));
+    $$('input[name=theme]').forEach((r) => r.addEventListener('change', () => { Store.setPref('theme', r.value); applyTheme(); Track.event('theme_changed', { theme: r.value, from: 'settings' }); }));
+    $$('input[name=skin]').forEach((r) => r.addEventListener('change', () => { Store.setPref('skin', r.value); Store.setPref('skinChosen', true); applyTheme(); Track.event('design_changed', { skin: r.value, from: 'settings' }); toast(r.value === 'immersive' ? 'Immersive 3D design on' : 'Flat design on'); }));
+    if ($('#signIn')) $('#signIn').addEventListener('click', () => Welcome.open({ only: 'account' }));
+    if ($('#signOut')) $('#signOut').addEventListener('click', async () => { await Auth.signOut(); Track.event('signed_out'); toast('Signed out'); render(); });
+    if ($('#trackToggle')) $('#trackToggle').addEventListener('change', (e) => { Track.setConsent(e.target.checked); toast(e.target.checked ? 'Thanks for helping improve CyberDigest' : 'Usage stats switched off'); });
+    $('#replayTour').addEventListener('click', () => Welcome.open());
     $('#backup').addEventListener('click', () => download(`cyberdigest-backup-${dayKey()}.json`, Store.exportJSON(), 'application/json'));
     $('#restore').addEventListener('change', async (e) => {
       const f = e.target.files[0];
@@ -567,19 +588,6 @@
       toast('Reading history cleared');
       render();
     });
-  }
-
-  function showOnboarding() {
-    const form = $('#onboardForm');
-    form.innerHTML = `
-      <div class="onboard-hero">
-        <h2>Welcome to CyberDigest</h2>
-        <p>Every day you get a short stack of cyber security bytes: news stories cut down to 2–3 key points each. GCC news is boosted by default. Pick what you care about. You can change it later in Settings.</p></div>
-      ${interestsHTML()}
-      <div class="row end"><button class="btn btn-primary" value="ok">Start reading →</button></div>`;
-    const dlg = $('#onboard');
-    dlg.showModal();
-    dlg.addEventListener('close', () => { readInterests(form); Store.setPref('onboarded', true); render(); }, { once: true });
   }
 
   function applyTheme() {
@@ -599,12 +607,33 @@
     const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
     Store.setPref('theme', dark ? 'light' : 'dark');
     applyTheme();
+    Track.event('theme_changed', { theme: Store.state.prefs.theme, from: 'header' });
   });
+
+  function askConsentOnce() {
+    if (!Track.enabled || Track.consent() !== undefined || !Store.state.prefs.onboarded) return;
+    const bar = document.createElement('div');
+    bar.className = 'consent-bar';
+    bar.setAttribute('role', 'dialog');
+    bar.setAttribute('aria-label', 'Usage stats');
+    bar.innerHTML = `<p><b>Help improve CyberDigest?</b> We'd like to count anonymous usage (pages, bytes read, design used) with a random ID. No titles, searches or notes. Change it any time in Settings.</p>
+      <div class="row wrap"><button class="btn btn-primary" data-ok="1">Yes, count my usage</button><button class="btn" data-ok="0">No thanks</button></div>`;
+    bar.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ok]');
+      if (!b) return;
+      Track.setConsent(b.dataset.ok === '1');
+      bar.remove();
+    });
+    document.body.appendChild(bar);
+  }
+
+  window.CDApp = { render: () => render(), applyTheme, toast, feed: () => FEED };
 
   /* ---------- router ---------- */
   function render(keepFocus) {
     const { route, params } = parseHash();
     renderChrome(route);
+    Track.event('page_view', { route });
     ({ today: renderToday, explore: renderExplore, stashes: renderStashes, settings: renderSettings })[route](params);
     if (!keepFocus) window.scrollTo(0, 0);
     if (keepFocus) { const q = $('#q'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }
@@ -622,9 +651,11 @@
     BY_ID = new Map(FEED.items.map((i) => [i.id, i]));
     render();
     renderFooter();
-    if (!Store.state.prefs.onboarded) showOnboarding();
+    if (!Store.state.prefs.onboarded) Welcome.open();
+    else askConsentOnce();
   }
 
   applyTheme();
   load();
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 })();

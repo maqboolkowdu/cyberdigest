@@ -59,6 +59,9 @@ No server, database or account is needed. Your reading history, stashes and note
 - **🔖 Stashes**: three built-in stashes plus your own. Edit notes inline, move stories between stashes, and export or copy a whole stash as Markdown.
 - **⚙️ Settings**: regions and topics to prioritise, the daily goal, light/dark/system theme, JSON backup and restore, reading-history reset, and the list of sources with story counts.
 - **📱 PWA**: install to the home screen or desktop. The last downloaded news is still readable offline.
+- **👋 Welcome tour**: a 6-step introduction with a progress bar: what CyberDigest is (with a live headline ticker), interests, daily goal, design, theme, and optional sign-in. Choices apply live. It can be replayed from Settings.
+- **🔐 Passwordless sign-in (optional)**: email plus a one-time code, with *Keep me signed in on this device*. Needs Supabase; see [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md).
+- **📊 Usage stats for the owner (with consent)**: anonymous events such as tour steps, bytes read and design chosen feed private reports, so you can see where to improve. Visitors can say no, and Do Not Track is respected.
 - **🖥️ Desktop and 📱 mobile layouts**:
   - **Desktop:** a boxed top menu. Today shows your briefing panel next to the byte card, with the GCC spotlight as a 4-column grid below. Explore has a one-line search and filter bar and two columns of results.
   - **Mobile:** the same design stacked in one column, with a bottom menu.
@@ -210,6 +213,9 @@ Register-ScheduledTask -TaskName "CyberDigest feed refresh" -Action $action -Tri
 cyberdigest/
 ├── .github/workflows/pages.yml  Refresh news every 3 hours and publish to GitHub Pages
 ├── docs/CUSTOM-DOMAIN.md        Step-by-step guide to using your own domain
+├── docs/SUPABASE-SETUP.md       Switch on sign-in and usage stats
+├── supabase/setup.sql           Database table, security rules and reports
+├── SECURITY.md                  Security assessment of sign-in and usage stats
 ├── index.html               App shell
 ├── manifest.webmanifest     PWA install metadata
 ├── sw.js                    Offline cache (network-first)
@@ -220,8 +226,14 @@ cyberdigest/
 └── assets/
     ├── css/app.css          Styles (light/dark, mobile-first)
     ├── css/immersive.css    Immersive 3D design (default)
+    ├── css/welcome.css      Welcome tour, sign-in and consent styles
     ├── js/data.js           Topics, GCC countries, helpers
     ├── js/store.js          Local state: prefs, streaks, stashes
     ├── js/app.js            Views: Today, Explore, Reader, Stashes, Settings
+    ├── js/welcome.js        Welcome tour and sign-in screens
+    ├── js/auth.js           Email one-time-code sign-in (Supabase Auth REST)
+    ├── js/track.js          Consent-based usage stats
+    ├── js/config.js         Supabase URL and public key (empty = off)
+    ├── js/boot.js           Applies theme/design before first paint
     └── icons/               App icons
 ```

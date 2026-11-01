@@ -197,8 +197,8 @@ def fetch(name, url, region):
             link = a.get("href") if a is not None else ""
         raw = el.findtext("content:encoded", namespaces=NS) or el.findtext("description") or el.findtext("atom:summary", namespaces=NS) or el.findtext("atom:content", namespaces=NS) or ""
         when = parse_date(el.findtext("pubDate") or el.findtext("atom:published", namespaces=NS) or el.findtext("atom:updated", namespaces=NS) or el.findtext("{http://purl.org/dc/elements/1.1/}date"))
-        if not title or not link:
-            continue
+        if not title or not link or not re.match(r"^https?://", link, re.I):
+            continue  # also drops javascript:/data: links from a compromised feed
         source = name
         if name.startswith("Google News"):
             # Google titles look like "Headline - Publisher"; the description is just a link list.
