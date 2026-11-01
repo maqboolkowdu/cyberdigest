@@ -77,8 +77,37 @@
     return 'Something went wrong. Please try again.';
   }
 
+  // Sign-in links: if the email holds a link instead of a code, clicking it returns here with the
+  // session (or an error) in the address. Take it, then wipe it from the address bar and history.
+  async function completeFromUrl() {
+    const hash = location.hash || '';
+    if (!/(^|[#&])(access_token|error_code|error)=/.test(hash)) return null;
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    history.replaceState(null, '', location.pathname + location.search + '#/today');
+    if (params.get('error') || params.get('error_code')) {
+      return { error: /expired|invalid/i.test(params.get('error_code') + params.get('error_description'))
+        ? 'That sign-in link has expired or was already used. Ask for a new code and use the newest email.'
+        : 'Sign-in did not complete. Please try again.' };
+    }
+    if (!enabled) return null;
+    const access = params.get('access_token'), refresh = params.get('refresh_token');
+    if (!access || !refresh) return null;
+    try {
+      // Never trust tokens from the address bar blindly: ask the server who they belong to.
+      const res = await fetch(`${base}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: `Bearer ${access}` } });
+      if (!res.ok) throw new Error('rejected');
+      const user = await res.json();
+      write(fromTokens({ access_token: access, refresh_token: refresh, expires_in: params.get('expires_in'), user }, true));
+      return { user: session.user };
+    } catch (e) {
+      return { error: 'That sign-in link could not be used. Ask for a new code.' };
+    }
+  }
+
   const Auth = {
     enabled,
+    sender: typeof cfg.emailSender === 'string' && cfg.emailSender.trim() ? cfg.emailSender.trim().slice(0, 120) : '',
+    completeFromUrl,
     validEmail: (e) => typeof e === 'string' && e.length <= 254 && EMAIL_RE.test(e.trim()),
     get user() { return session ? session.user : null; },
     get remembered() { return !!(session && session.remember); },
