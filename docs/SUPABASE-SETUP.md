@@ -63,16 +63,38 @@ This creates the `events` table with row-level security (visitors can only add r
 
 ### Step 3: Set up email sending (required)
 
-Supabase's built-in email sender is only for testing: it **only delivers to members of your Supabase team** and allows a few emails per hour. Use your own SMTP service:
+Supabase's built-in email sender is only for testing:
+- it **only delivers to members of your Supabase team** (you), so visitors never get a code;
+- it sends **about 2 emails per hour for the whole project** ("Too many sign-in emails were sent recently");
+- **email templates are locked** until you use your own sender, so the email shows a link, not a code.
+
+Use your own SMTP service. **Brevo** is the easiest without a domain:
 
 | Service | Free tier | Notes |
 |---|---|---|
-| **Resend** | 3,000 emails/month | Easiest; verify your domain with a few DNS records |
-| **Brevo** | 300 emails/day | No domain needed to start |
-| **Zoho Mail / Microsoft 365** | With your mailbox | Use an app password; good if you already have one |
+| **Brevo** (recommended to start) | 300 emails/day | No domain needed; verify your sender address by email |
+| **Resend** | 3,000 emails/month | Needs your own domain (a few DNS records) |
+| **Gmail** | ~500/day | Needs an *app password*, which is not available on accounts that use passkeys or Advanced Protection |
 
-1. Create an account with the service and get its **SMTP host, port, username and password**.
-2. In Supabase, open **Authentication → Emails → SMTP Settings**, switch on **Enable custom SMTP** and fill it in. Set **Sender email** to, for example, `no-reply@yourdomain.com` and **Sender name** to `CyberDigest`.
+**Brevo, step by step**
+1. Sign up at **https://www.brevo.com** (free plan).
+2. **Senders, Domains & Dedicated IPs → Senders → Add a sender**: name `CyberDigest`, email = your address. Click the confirmation link Brevo emails you.
+3. **SMTP & API → SMTP** tab: note the **SMTP server** (`smtp-relay.brevo.com`), **Port** (`587`) and **Login** (looks like `xxxx@smtp-brevo.com`). Click **Generate a new SMTP key**, name it `Supabase`, and copy it (it is shown once).
+4. In Supabase, open **Authentication → Emails → SMTP Settings**, switch on **Enable custom SMTP** and fill in:
+
+   | Supabase field | Value |
+   |---|---|
+   | Sender email | the address you verified in Brevo |
+   | Sender name | `CyberDigest` |
+   | Host | `smtp-relay.brevo.com` |
+   | Port | `587` |
+   | Username | the Brevo **Login** (`…@smtp-brevo.com`) |
+   | Password | the Brevo **SMTP key** |
+
+5. **Authentication → Rate Limits**: raise **Rate limit for sending emails** to about `30` per hour. This setting is only editable with custom SMTP.
+6. Tell the site who sends the codes: in `assets/js/config.js`, set `emailSender` to, for example, `'CyberDigest <you@example.com>'`.
+
+> If you use a free address such as Gmail as the sender, some codes may land in spam, because the email isn't sent by Gmail's own servers. When you have your own domain, verify it in Brevo and send from `no-reply@yourdomain.com` for the best delivery.
 
 ### Step 4: Send a code, not a link
 
@@ -162,6 +184,7 @@ Use the **Export → CSV** button on any result to open it in Excel.
 | No email arrives | Custom SMTP not set, or the sender domain isn't verified | Step 3; check the SMTP service's logs; look in spam |
 | The email has a link, not a code | Template still the default | Step 4: edit both templates to use `{{ .Token }}` |
 | "That code is not correct" with the right code | The code expired, or a newer code was requested | Ask for a new code and use the latest email |
-| "Too many attempts" | Rate limit reached | Wait a minute; adjust **Rate Limits** if real users hit it |
+| "Too many sign-in emails were sent recently" | Project-wide email limit (about 2/hour on the built-in sender) | Set up custom SMTP (Step 3), then raise **Rate Limits → emails per hour** |
+| "Please wait N seconds…" | Per-person cooldown between codes | Wait the time shown; use the newest email |
 | The tour still has 5 steps | `config.js` not filled in, or an old cached copy | Check the two values; close and reopen the app |
 | No rows in `events` | Visitor said no to usage stats, browser sends Do Not Track, or CSP blocks the URL | Turn stats on in Settings; check the URL in `index.html` `connect-src` |

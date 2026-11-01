@@ -70,7 +70,14 @@
 
   // Friendly messages for the common failures.
   function explain(err) {
-    if (err.status === 429 || /rate/i.test(err.code)) return 'Too many attempts. Please wait a minute and try again.';
+    if (err.status === 429 || /rate_limit/i.test(err.code)) {
+      // Supabase says exactly how long to wait for the per-person cooldown ("…after 37 seconds").
+      const wait = /after (\d+) seconds?/i.exec(err.message);
+      if (wait) return `Please wait ${wait[1]} seconds before asking for another code.`;
+      // Project-wide email limit (only a few per hour until custom SMTP is set up).
+      if (/email/i.test(`${err.code} ${err.message}`)) return 'Too many sign-in emails were sent recently. Please try again later (this can take up to an hour). If you already have a code, you can still enter it.';
+      return 'Too many attempts. Please wait a few minutes and try again.';
+    }
     if (/otp_expired|expired/i.test(err.code + err.message)) return 'That code has expired or is not correct. Ask for a new one.';
     if (err.status === 400 || err.status === 403 || err.status === 422) return 'That code is not correct. Check the email and try again.';
     if (err instanceof TypeError) return 'Could not reach the sign-in service. Check your connection.';
